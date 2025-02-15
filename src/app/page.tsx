@@ -46,7 +46,7 @@ const initialData = [
   { id: 11, name: "README.md", type: "file", size: 2000, fileType: "md" },
 ]
 
-const formatFileSize = (bytes) => {
+const formatFileSize = (bytes: number) => {
   if (bytes === 0) return "0 Bytes"
   const k = 1024
   const sizes = ["Bytes", "KB", "MB", "GB", "TB"]
@@ -58,13 +58,13 @@ export default function GoogleDriveClone() {
   const [currentFolder, setCurrentFolder] = useState(initialData)
   const [breadcrumbs, setBreadcrumbs] = useState([{ name: "My Drive", data: initialData }])
 
-  const handleFolderClick = (folder) => {
-    setCurrentFolder(folder.children)
-    setBreadcrumbs([...breadcrumbs, { name: folder.name, data: folder.children }])
+  const handleFolderClick = (folder: typeof initialData[number]) => {
+    setCurrentFolder(folder.children ?? [])
+    setBreadcrumbs([...breadcrumbs, { name: folder.name, data: folder.children ?? [] }])
   }
 
-  const handleBreadcrumbClick = (index) => {
-    setCurrentFolder(breadcrumbs[index].data)
+  const handleBreadcrumbClick = (index: number) => {
+    setCurrentFolder(breadcrumbs[index]?.data ?? [])
     setBreadcrumbs(breadcrumbs.slice(0, index + 1))
   }
 
@@ -126,8 +126,8 @@ export default function GoogleDriveClone() {
                 </div>
                 <div className="text-sm text-gray-400">
                   {item.type === "folder"
-                    ? `${item.children.length} item${item.children.length !== 1 ? "s" : ""}`
-                    : `${formatFileSize(item.size)} • ${item.fileType.toUpperCase()}`}
+                    ? `${item.children?.length} item${item.children?.length !== 1 ? "s" : ""}`
+                    : `${formatFileSize(item.size ?? 0)} • ${item.fileType?.toUpperCase()}`}
                 </div>
               </div>
             ))}
