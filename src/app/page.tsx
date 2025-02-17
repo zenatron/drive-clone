@@ -1,138 +1,117 @@
 "use client"
 
-import React, { useState } from "react"
-import { Folder, File, ChevronRight, Upload, Home } from "lucide-react"
-import Link from "next/link"
+import React, { useMemo, useState } from "react"
+import { ChevronRight, Upload, Home } from "lucide-react"
 
 import { Button } from "~/components/ui/button"
-import { ScrollArea } from "~/components/ui/scroll-area"
+import { mockFolders, mockFiles } from "~/lib/mock-data"
+import { FileRow, FolderRow } from "./file-row"
 
-// Mock data for files and folders
-const initialData = [
-  {
-    id: 1,
-    name: "Documents",
-    type: "folder",
-    children: [
-      {
-        id: 2,
-        name: "Work",
-        type: "folder",
-        children: [
-          { id: 3, name: "Project Proposal.docx", type: "file", size: 2500000, fileType: "docx" },
-          { id: 4, name: "Budget.xlsx", type: "file", size: 1800000, fileType: "xlsx" },
-        ],
-      },
-      {
-        id: 5,
-        name: "Personal",
-        type: "folder",
-        children: [
-          { id: 6, name: "Resume.pdf", type: "file", size: 500000, fileType: "pdf" },
-          { id: 7, name: "Family Photo.jpg", type: "file", size: 3500000, fileType: "jpg" },
-        ],
-      },
-    ],
-  },
-  {
-    id: 8,
-    name: "Downloads",
-    type: "folder",
-    children: [
-      { id: 9, name: "Movie.mp4", type: "file", size: 1500000000, fileType: "mp4" },
-      { id: 10, name: "Song.mp3", type: "file", size: 8000000, fileType: "mp3" },
-    ],
-  },
-  { id: 11, name: "README.md", type: "file", size: 2000, fileType: "md" },
-]
-
-const formatFileSize = (bytes: number) => {
-  if (bytes === 0) return "0 Bytes"
-  const k = 1024
-  const sizes = ["Bytes", "KB", "MB", "GB", "TB"]
-  const i = Math.floor(Math.log(bytes) / Math.log(k))
-  return Number.parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + " " + sizes[i]
-}
+// const formatFileSize = (bytes: number) => {
+//   if (bytes === 0) return "0 Bytes"
+//   const k = 1024
+//   const sizes = ["Bytes", "KB", "MB", "GB", "TB"]
+//   const i = Math.floor(Math.log(bytes) / Math.log(k))
+//   return Number.parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + " " + sizes[i]
+// }
 
 export default function GoogleDriveClone() {
-  const [currentFolder, setCurrentFolder] = useState(initialData)
-  const [breadcrumbs, setBreadcrumbs] = useState([{ name: "My Drive", data: initialData }])
+  const [currentFolder, setCurrentFolder] = useState<string>("root");
 
-  const handleFolderClick = (folder: typeof initialData[number]) => {
-    setCurrentFolder(folder.children ?? [])
-    setBreadcrumbs([...breadcrumbs, { name: folder.name, data: folder.children ?? [] }])
+  const breadcrumbs = useMemo(() => {
+    const path = [];
+    
+    // Always start with root
+    path.push({ id: "root", name: "My Drive", type: "folder" as const, parent: null });
+    
+    // If we're not at root, find the current folder
+    if (currentFolder !== "root") {
+      const current = mockFolders.find(f => f.id === currentFolder);
+      if (current) {
+        // If it's a direct child of root, just add it
+        if (current.parent === "root") {
+          path.push(current);
+        } else {
+          // Otherwise, find its parent
+          const parent = mockFolders.find(f => f.id === current.parent);
+          if (parent) path.push(parent);
+          path.push(current);
+        }
+      }
+    }
+    
+    return path;
+  }, [currentFolder]);
+
+  const getCurrentFiles = () => {
+    return mockFiles.filter((file) => file.parent === currentFolder);
   }
 
-  const handleBreadcrumbClick = (index: number) => {
-    setCurrentFolder(breadcrumbs[index]?.data ?? [])
-    setBreadcrumbs(breadcrumbs.slice(0, index + 1))
+  const getCurrentFolders = () => {
+    return mockFolders.filter((folder) => folder.parent === currentFolder);
+  }
+
+  const handleFolderClick = (folder: (typeof mockFolders)[number]) => {
+    setCurrentFolder(folder.id)
   }
 
   return (
-    <div className="flex h-screen bg-gray-900 text-gray-100">
+    <div className="flex h-screen bg-gray-900">
       {/* Sidebar */}
-      <div className="w-64 bg-gray-800 p-4">
-        <h1 className="text-2xl font-bold mb-4">Google Drive Clone</h1>
-        <Button className="w-full mb-4">
-          <Upload className="mr-2 h-4 w-4" /> Upload
-        </Button>
-        <nav>
-          <Button variant="ghost" className="w-full justify-start">
+      <div className="w-64 border-r border-gray-800 p-6 flex flex-col gap-6">
+        <h1 className="text-xl font-semibold text-gray-100">Drive Clone</h1>
+        
+        <div className="space-y-2">
+          <Button className="w-full bg-blue-600 hover:bg-blue-700 text-white">
+            <Upload className="mr-2 h-4 w-4" /> Upload Files
+          </Button>
+          
+          <Button 
+            variant="ghost" 
+            onClick={() => {
+              setCurrentFolder("root")
+            }} 
+            className="w-full justify-start text-gray-300 hover:text-gray-100 hover:bg-gray-800/50"
+          >
             <Home className="mr-2 h-4 w-4" /> My Drive
           </Button>
-        </nav>
+        </div>
       </div>
 
       {/* Main content */}
-      <div className="flex-1 p-4">
+      <div className="flex-1 p-8">
         {/* Breadcrumbs */}
-        <div className="flex items-center mb-4">
-          {breadcrumbs.map((crumb, index) => (
-            <React.Fragment key={index}>
+        <nav className="flex items-center space-x-1 mb-6">
+          {breadcrumbs.map((folder, index) => (
+            <div key={folder.id} className="flex items-center gap-1">
+              {index > 0 && <ChevronRight className="h-4 w-4 text-gray-600" />}
               <Button
-                variant="link"
-                className="text-blue-400 hover:text-blue-300"
-                onClick={() => handleBreadcrumbClick(index)}
+                variant="ghost"
+                className="text-gray-400 hover:text-gray-300 px-2 h-auto font-medium"
+                onClick={() => handleFolderClick(folder)}
               >
-                {crumb.name}
+                {folder.name}
               </Button>
-              {index < breadcrumbs.length - 1 && <ChevronRight className="mx-2 h-4 w-4" />}
-            </React.Fragment>
+            </div>
           ))}
-        </div>
+        </nav>
 
         {/* File/Folder list */}
-        <ScrollArea className="h-[calc(100vh-8rem)] rounded-md border border-gray-700">
-          <div className="p-4">
-            {currentFolder.map((item) => (
-              <div
-                key={item.id}
-                className="flex items-center justify-between p-2 hover:bg-gray-800 rounded cursor-pointer"
-                onClick={() => item.type === "folder" && handleFolderClick(item)}
-              >
-                <div className="flex items-center">
-                  {item.type === "folder" ? (
-                    <Folder className="mr-2 h-5 w-5 text-yellow-400" />
-                  ) : (
-                    <File className="mr-2 h-5 w-5 text-blue-400" />
-                  )}
-                  {item.type === "folder" ? (
-                    <span>{item.name}</span>
-                  ) : (
-                    <Link href="#" className="text-blue-400 hover:underline">
-                      {item.name}
-                    </Link>
-                  )}
-                </div>
-                <div className="text-sm text-gray-400">
-                  {item.type === "folder"
-                    ? `${item.children?.length} item${item.children?.length !== 1 ? "s" : ""}`
-                    : `${formatFileSize(item.size ?? 0)} • ${item.fileType?.toUpperCase()}`}
-                </div>
-              </div>
-            ))}
-          </div>
-        </ScrollArea>
+        <ul className="space-y-1">
+          {getCurrentFolders().map((folder) => (
+            <FolderRow
+              key={folder.id}
+              folder={folder}
+              handleFolderClick={() => handleFolderClick(folder)}
+            />
+          ))}
+          {getCurrentFiles().map((file) => (
+            <FileRow
+              key={file.id}
+              file={file}
+            />
+          ))}
+        </ul>
       </div>
     </div>
   )
